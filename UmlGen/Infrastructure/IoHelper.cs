@@ -19,15 +19,13 @@ public static class IoHelper
         return streamReader.ReadToEnd();
     }
 
-    public static string CreateFile(string[] pathList, string data)
+    public static void CreateFile(string path, List<string> lines)
     {
-        var path = Path.Combine(pathList);
-        
-
-        using var streamWriter = new StreamWriter($"{path}.md");
-        streamWriter.Write(data);
-
-        return path;
+        using var streamWriter = new StreamWriter(path);
+        foreach (var line in lines)
+        {
+            streamWriter.WriteLine(line);
+        }
     }
 
     

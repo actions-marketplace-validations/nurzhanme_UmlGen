@@ -5,93 +5,127 @@ using System.Text;
 using UmlGen.Infrastructure;
 using UmlGen.Model;
 
-namespace UmlGen.Service
+namespace UmlGen.Service;
+
+public class ClassService
 {
-    public class ClassService
-    {
-        private Dictionary<string, ClassStructure> classes;
+    private Dictionary<string, ClassStructure> classes = new();
         
-        public void ReadFiles(string path)
-        {
-            var files = Directory.GetFiles(path);
+    public void ReadFiles(string path)
+    {
+        //todo read all files from all folders
+        var files = Directory.GetFiles(path);
 
-            foreach (var file in files)
+        foreach (var file in files)
+        {
+            if (!File.Exists(file))
             {
-                if (!File.Exists(file))
+                continue;
+            }
+
+            var code = IoHelper.ReadFile(file);
+            var tree = CSharpSyntaxTree.ParseText(code);
+            var root = tree.GetRoot();
+
+            var classDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
+
+            foreach (var classDeclaration in classDeclarations)
+            {
+                var classname = classDeclaration.Identifier.ToString();
+                    
+                var props = classDeclaration.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
+
+                var methods = classDeclaration.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
+
+                var classStructure = new ClassStructure();
+                classStructure.Name = classname;
+                classStructure.ParentName = classDeclaration.BaseList?.Types.FirstOrDefault()?.ToString();
+                classStructure.Properties = new List<(string text, string typename)>();
+                classStructure.Methods = new List<string>();
+
+                foreach (var csProp in props)
                 {
-                    continue;
+                    var modifiers = GetModifiers(csProp.Modifiers);
+                    var typename = csProp.Type.ToString();
+                    var umlProperty = $"{modifiers.accessModifier}{csProp.Identifier.Text} {typename}{modifiers.additionalModifier}";
+
+                    classStructure.Properties.Add((umlProperty, typename));
                 }
 
-                var code = IoHelper.ReadFile(file);
-                var tree = CSharpSyntaxTree.ParseText(code);
-                var root = tree.GetRoot();
-
-                var classDeclarations = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
-
-                foreach (var classDeclaration in classDeclarations)
+                foreach (var csMethod in methods)
                 {
-                    var classname = classDeclaration.Identifier.ToString();
-                    
-                    var props = classDeclaration.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
+                    var modifiers = GetModifiers(csMethod.Modifiers);
 
-                    var methods = classDeclaration.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
+                    var parameters = string.Join(", ", csMethod.ParameterList.Parameters.Select(x => $"{x.Identifier.ValueText} {x.Type.ToString()}"));
 
-                    var classStructure = new ClassStructure();
-                    classStructure.Name = classname;
-                    classStructure.Properties = new List<string>();
-                    classStructure.Methods = new List<string>();
+                    var umlMethod = $"{modifiers.accessModifier}{csMethod.Identifier.Text}({parameters}) {csMethod.ReturnType.ToString()}{modifiers.additionalModifier}";
 
-
-                    foreach (var csProp in props)
-                    {
-                        var modifiers = GetModifiers(csProp.Modifiers);
-
-                        var umlProperty = $"{modifiers.accessModifier}{csProp.Identifier.Text} {csProp.Type.ToString}{modifiers.additionalModifier}";
-
-                        classStructure.Properties.Add(umlProperty);
-                    }
-
-                    foreach (var csMethod in methods)
-                    {
-                        var modifiers = GetModifiers(csMethod.Modifiers);
-
-                        var parameters = string.Join(", ", csMethod.ParameterList.Parameters.Select(x => $"{x.Identifier.ValueText} {x.Type.ToString}"));
-
-                        var umlMethod = $"{modifiers.accessModifier}{csMethod.Identifier.Text}({parameters}) {csMethod.ReturnType.ToString}{modifiers.additionalModifier}";
-
-                        classStructure.Methods.Add(umlMethod);
-                    }
-
-                    
+                    classStructure.Methods.Add(umlMethod);
                 }
+
+                classes.Add(classname, classStructure);
             }
         }
+    }
 
-        private (char accessModifier, string additionalModifier) GetModifiers(SyntaxTokenList tokens)
+    public void WriteUmlText(string path)
+    {
+        var openCurlyBrace = '{';
+        var closeCurlyBrace = '}';
+        
+        List<string> result = new();
+        List<string> classRelationships = new();
+        
+        result.Add("```mermaid");
+        result.Add("classDiagram");
+        foreach (var classStructure in classes)
         {
-            bool isPublic = tokens.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
-            bool isPrivate = tokens.Any(m => m.IsKind(SyntaxKind.PrivateKeyword));
-            bool isProtected = tokens.Any(m => m.IsKind(SyntaxKind.ProtectedKeyword));
-            bool isInternal = tokens.Any(m => m.IsKind(SyntaxKind.InternalKeyword));
-
-            bool isStatic = tokens.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
-
-            bool isAbstract = tokens.Any(m => m.IsKind(SyntaxKind.AbstractKeyword));
-            bool isVirtual = tokens.Any(m => m.IsKind(SyntaxKind.VirtualKeyword));
-
-            var accessModifier = isPublic ? '+' : isPrivate ? '-' : isProtected ? '#' : '~';
-
-            var additionalModifierBuilder = new StringBuilder();
-            if (isStatic)
+            result.Add($"{classStructure.Value.ParentName}  <|-- {classStructure.Value.Name}");
+            
+            result.Add($"class {classStructure.Key}{openCurlyBrace}");
+            foreach (var property in classStructure.Value.Properties)
             {
-                additionalModifierBuilder.Append("$");
+                if (classes.ContainsKey(property.typename))
+                {
+                    classRelationships.Add($"{property.typename} o-- {classStructure.Key}");
+                }
+                result.Add(property.text);
             }
-            if (isAbstract)
-            {
-                additionalModifierBuilder.Append("*");
-            }
-
-            return (accessModifier, additionalModifierBuilder.ToString());
+            result.Add($"{closeCurlyBrace}");
+            
+            result.AddRange(classRelationships);
+            
+            classRelationships.Clear();
         }
+        result.Add("```");
+
+        IoHelper.CreateFile(path, result);
+    }
+
+    private (char accessModifier, string additionalModifier) GetModifiers(SyntaxTokenList tokens)
+    {
+        bool isPublic = tokens.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
+        bool isPrivate = tokens.Any(m => m.IsKind(SyntaxKind.PrivateKeyword));
+        bool isProtected = tokens.Any(m => m.IsKind(SyntaxKind.ProtectedKeyword));
+        bool isInternal = tokens.Any(m => m.IsKind(SyntaxKind.InternalKeyword));
+
+        bool isStatic = tokens.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
+
+        bool isAbstract = tokens.Any(m => m.IsKind(SyntaxKind.AbstractKeyword));
+        bool isVirtual = tokens.Any(m => m.IsKind(SyntaxKind.VirtualKeyword));
+
+        var accessModifier = isPublic ? '+' : isPrivate ? '-' : isProtected ? '#' : '~';
+
+        var additionalModifierBuilder = new StringBuilder();
+        if (isStatic)
+        {
+            additionalModifierBuilder.Append("$");
+        }
+        if (isAbstract)
+        {
+            additionalModifierBuilder.Append("*");
+        }
+
+        return (accessModifier, additionalModifierBuilder.ToString());
     }
 }
