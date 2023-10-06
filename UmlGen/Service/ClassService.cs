@@ -58,9 +58,9 @@ public class ClassService
                 {
                     var modifiers = GetModifiers(csMethod.Modifiers);
 
-                    var parameters = string.Join(", ", csMethod.ParameterList.Parameters.Select(x => $"{x.Identifier.ValueText} {x.Type.ToString()}"));
+                    var parameters = string.Join(", ", csMethod.ParameterList.Parameters.Select(x => $"{x.Identifier.ValueText} {x.Type}"));
 
-                    var umlMethod = $"{modifiers.accessModifier}{csMethod.Identifier.Text}({parameters}) {csMethod.ReturnType.ToString()}{modifiers.additionalModifier}";
+                    var umlMethod = $"{modifiers.accessModifier}{csMethod.Identifier.Text}({parameters}) {csMethod.ReturnType}{modifiers.additionalModifier}";
 
                     classStructure.Methods.Add(umlMethod);
                 }

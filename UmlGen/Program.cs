@@ -1,16 +1,13 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using UmlGen.Service;
 
-Console.WriteLine("Hello, World!");
+if (args.Length <= 2) throw new ArgumentException("Please supply arguments.");
 
-
-var currentPath = $"C:/Users/nurzh/source/repos/UmlGen/UmlGen/Samples";
+var entitiesPath = args[0];
+var savePath = args[1];
 
 ClassService classService = new ClassService();
 
-classService.ReadFiles(currentPath);
-classService.WriteUmlText($"{currentPath}/uml.md");
+classService.ReadFiles(entitiesPath);
 
-
-
-Console.WriteLine("Bye");
+classService.WriteUmlText($"{savePath}/uml.md");
