@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Text;
@@ -80,8 +80,16 @@ public class ClassService
         result.Add("classDiagram");
         foreach (var classStructure in classes)
         {
-            result.Add($"{classStructure.Value.ParentName}  <|-- {classStructure.Value.Name}");
-            
+            if (!string.IsNullOrWhiteSpace(classStructure.Value.ParentName))
+            {
+                result.Add($"{classStructure.Value.ParentName}  <|-- {classStructure.Value.Name}");
+            }
+
+            if (classStructure.Value.Properties.Count == 0 && classStructure.Value.Methods.Count == 0)
+            {
+                continue;
+            }
+
             result.Add($"class {classStructure.Key}{openCurlyBrace}");
             foreach (var property in classStructure.Value.Properties)
             {
@@ -91,12 +99,16 @@ public class ClassService
                 }
                 result.Add(property.text);
             }
+            
+            foreach (var method in  classStructure.Value.Methods)
+            {
+                result.Add(method);
+            }
+
             result.Add($"{closeCurlyBrace}");
-            
-            result.AddRange(classRelationships);
-            
-            classRelationships.Clear();
         }
+        result.AddRange(classRelationships);
+
         result.Add("```");
 
         IoHelper.CreateFile(path, result);
