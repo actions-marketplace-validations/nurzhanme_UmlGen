@@ -13,12 +13,14 @@ public class ClassService
         
     public void ReadFiles(string path)
     {
+        var fileExtension = ".cs";
+
         //todo read all files from all folders
         var files = Directory.GetFiles(path);
 
         foreach (var file in files)
         {
-            if (!File.Exists(file))
+            if (!File.Exists(file) || !file.EndsWith(fileExtension))
             {
                 continue;
             }
@@ -99,8 +101,8 @@ public class ClassService
                 }
                 result.Add(property.text);
             }
-            
-            foreach (var method in  classStructure.Value.Methods)
+
+            foreach (var method in classStructure.Value.Methods)
             {
                 result.Add(method);
             }
