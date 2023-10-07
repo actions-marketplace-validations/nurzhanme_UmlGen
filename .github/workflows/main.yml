@@ -1,0 +1,33 @@
+name: Generate UML.md
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-readme-sample:
+    runs-on: ubuntu-latest
+    name: Generate UML.md
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v2
+
+      - name: generate UML diagrams using mermaid from c# enitity classes
+        id: update-UML
+        uses: ./
+        with:
+          path-to-entities: ${{ secrets.PATH_TO_ENTITIES }}
+ 
+      - name: Commit UML.md changes.
+        id: commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generated UML"
+          git push
+        shell: bash
+
+      - name: Show UML.md content
+        id: print
+        run: echo "$(<UML.md)"
