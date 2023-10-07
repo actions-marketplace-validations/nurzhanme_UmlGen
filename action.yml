@@ -4,18 +4,18 @@ branding:
   icon: arrow-right-circle
   color: black
 inputs:
-  uml-file:
-    description: 'File to update. Default to UML.md'
-    required: true
-    default: 'UML.md'
   path-to-entities:
     description: 'Path to entities'
     required: true
     default: 'unknown'
+  uml-file:
+    description: 'File to update. Default to UML.md'
+    required: true
+    default: 'UML.md'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
-    - ${{ inputs.file-to-update }}
     - ${{ inputs.path-to-entities }}
+    - ${{ inputs.uml-file }}
   entrypoint: "/app/entrypoint.sh"
