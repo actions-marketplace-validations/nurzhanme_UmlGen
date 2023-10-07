@@ -1,0 +1,21 @@
+name: 'create UML diagrams using mermaid from c# enitity classes'
+description: 'create UML diagrams using mermaid from c# classes'
+branding:
+  icon: arrow-right-circle
+  color: black
+inputs:
+  uml-file:
+    description: 'File to update. Default to UML.md'
+    required: true
+    default: 'UML.md'
+  path-to-entities:
+    description: 'Path to entities'
+    required: true
+    default: 'unknown'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.file-to-update }}
+    - ${{ inputs.path-to-entities }}
+  entrypoint: "/app/entrypoint.sh"
