@@ -10,4 +10,4 @@ ClassService classService = new ClassService();
 
 classService.ReadFiles(entitiesPath);
 
-classService.WriteUmlText($"{savePath}/uml.md");
+classService.WriteUmlText($"{savePath}.md");
